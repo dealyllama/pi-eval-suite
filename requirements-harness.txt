@@ -1,0 +1,5 @@
+# Harness — required for run_benchmarks.py (lm-evaluation-harness)
+# Heavy install (~500MB). Only needed if you want harness-compatible benchmark scores.
+# Install with: pip install -r requirements-harness.txt
+-r requirements.txt
+lm-eval>=0.4.3

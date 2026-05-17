@@ -89,12 +89,31 @@ model_testing/
 ### 1. Clone the repo
 
 ```bash
-git clone <your-repo-url> model_testing
-cd model_testing
-pip install requests datasets   # minimum dependencies
+git clone https://github.com/dealyllama/pi-eval-suite.git
+cd pi-eval-suite
 ```
 
-### 2. Point the scripts at your Ollama host
+### 2. Install dependencies
+
+```bash
+# Core only — enough for run_eval.py, smoke_test.py, eval.sh
+./setup.sh
+
+# Core + benchmark.py (ARC-Challenge, HumanEval via direct Ollama API)
+./setup.sh --benchmarks
+
+# Core + lm-evaluation-harness for run_benchmarks.py (~500MB, optional)
+./setup.sh --harness
+
+# Everything
+./setup.sh --all
+```
+
+This creates `.venv/` and installs into it. `eval.sh` activates it automatically.
+If you prefer a manual install: `pip install -r requirements.txt` (and optionally
+`requirements-benchmarks.txt` or `requirements-harness.txt`).
+
+### 3. Point the scripts at your Ollama host
 
 All scripts read `OLLAMA_BASE_URL` from the environment. Set it once in your shell profile:
 
@@ -159,9 +178,9 @@ extension and restart Pi before running any agentic tests.
 
 | Situation | Command |
 |---|---|
-| **New model** — first time testing this model | `python3 run_eval.py --model <model> --new-model` |
-| **New model + benchmark scores** | `python3 run_eval.py --model <model> --new-model --benchmark` |
-| **Toolchain change** — same model, different Pi config | `python3 run_eval.py --model <model>` |
+| **New model** — first time testing this model | `./eval.sh --model <model> --new-model` |
+| **New model + benchmark scores** | `./eval.sh --model <model> --new-model --benchmark` |
+| **Toolchain change** — same model, different Pi config | `./eval.sh --model <model>` |
 | **Quick benchmark only** (no agentic tests) | `python3 smoke_test.py <model>` then `python3 benchmark.py <model> arc --limit 50` |
 
 With GPU metrics from the sidecar, append `--gpu-server http://192.168.1.10:8765/gpu` to
@@ -171,14 +190,23 @@ any `run_eval.py` or `benchmark.py` command.
 
 ```bash
 # Example: new model, quick benchmark sanity check, GPU metrics
-python3 run_eval.py \
+./eval.sh \
   --model hf.co/unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q2_K_XL \
   --new-model \
   --benchmark --limit 50 \
   --gpu-server http://192.168.1.10:8765/gpu
 ```
 
+`eval.sh` activates the venv, checks Python version, verifies Ollama is reachable,
+then passes all arguments through to `run_eval.py`. You can call `run_eval.py` directly
+if you prefer to manage the environment yourself.
+
 This will:
+1. Create a run directory at `runs/<model-slug>_<timestamp>/`
+2. Copy the master test plan into it with your `run_id` and model name already filled in
+3. Run the smoke test — if the model fails, it stops here
+4. Run the benchmark (if requested)
+5. Print the exact path to open in Pi
 1. Create a run directory at `runs/<model-slug>_<timestamp>/`
 2. Copy the master test plan into it with your `run_id` and model name already filled in
 3. Run the smoke test — if the model fails, it stops here
@@ -306,6 +334,37 @@ runs/
 ---
 
 ## Individual tools reference
+
+### `eval.sh` — recommended entry point
+
+Thin wrapper around `run_eval.py` that handles environment setup and pre-flight checks.
+
+```bash
+./eval.sh --model <model> [same options as run_eval.py]
+```
+
+Checks performed before handing off:
+- Python 3.10+ present
+- `.venv/` activated if it exists
+- `OLLAMA_BASE_URL` set (warns if not)
+- Ollama API reachable (fast-fails with a clear message if not)
+- `requests` package installed
+
+---
+
+### `setup.sh` — environment setup
+
+```bash
+./setup.sh              # core only
+./setup.sh --benchmarks # + datasets (benchmark.py)
+./setup.sh --harness    # + lm-eval  (run_benchmarks.py, ~500MB)
+./setup.sh --all        # everything
+```
+
+Creates `.venv/` in the repo root. Run once after cloning. Re-run after pulling if
+new dependencies are added.
+
+---
 
 ### `run_eval.py` — unified entry point
 

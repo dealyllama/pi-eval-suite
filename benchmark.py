@@ -293,67 +293,21 @@ def run_arc(model, limit=None, concurrency=1, gpu_url=None):
 # ── IFEval ────────────────────────────────────────────────────────────────────
 
 def run_ifeval(model, limit=None, gpu_url=None):
-    from datasets import load_dataset
-    ds = load_dataset("google/IFEval", split="train")
-    if limit:
-        ds = ds.select(range(min(limit, len(ds))))
+    """IFEval requires the lm-evaluation-harness for correct instruction checking.
+    The direct-API path cannot be implemented without ifeval_utils from the
+    google/IFEval repo, which is not distributed here.
 
-    total = len(ds)
-    passed = 0
-    errors = 0
-    results = []
-
-    print(f"\nRunning IFEval on {model} ({total} prompts)")
-    start = time.time()
-    gpu = GPUSampler(remote_url=gpu_url).start()
-
-    for i, item in enumerate(ds):
-        prompt = item["prompt"]
-        response, tok = chat(model, [{"role": "user", "content": prompt}],
-                        max_tokens=1024, temperature=0.0, timeout=300)
-
-        is_error = response.startswith("ERROR")
-        if is_error:
-            errors += 1
-
-        # Check each instruction in the prompt
-        instruction_ids = item.get("instruction_id_list", [])
-        kwargs_list = item.get("kwargs", [])
-
-        prompt_passed = True
-        if not is_error:
-            from ifeval_utils import check_instruction
-            for inst_id, kwargs in zip(instruction_ids, kwargs_list):
-                if not check_instruction(inst_id, response, kwargs):
-                    prompt_passed = False
-                    break
-
-        if not is_error and prompt_passed:
-            passed += 1
-
-        results.append({"prompt": prompt[:80], "response": response[:200],
-                         "passed": prompt_passed, "error": is_error, "tok": tok})
-
-        if (i + 1) % 50 == 0 or (i + 1) == total:
-            acc = passed / (i + 1 - errors) if (i + 1 - errors) > 0 else 0
-            print(f"  [{i+1}/{total}] strict_acc={acc*100:.1f}%  errors={errors}  "
-                  f"elapsed={time.time()-start:.0f}s")
-
-    valid = total - errors
-    acc = passed / valid if valid > 0 else 0
-    elapsed = time.time() - start
-    tok_rates = [r["tok"].get("eval_tok_per_s", 0) for r in results if r["tok"].get("eval_tok_per_s", 0) > 0]
-    avg_tps = round(sum(tok_rates) / len(tok_rates), 1) if tok_rates else None
-    gpu.stop()
-    gs = gpu.stats
-    gs["avg_tok_per_s"] = avg_tps
-    gs["elapsed_s"] = round(elapsed, 1)
-    print(f"\nIFEval strict result: {passed}/{valid} = {acc*100:.1f}%  ({errors} errors)")
-    print(f"Throughput:  {avg_tps} tok/s avg")
-    print(f"GPU utilization:  avg={gs['gpu_util_avg']}%  peak={gs['gpu_util_peak']}%  "
-          f"mem_peak={gs['mem_used_peak_mb']}MB  ({gs['samples']} samples)")
-    return acc, results, gs
-
+    Use run_benchmarks.py instead:
+        python3 run_benchmarks.py <model> ifeval [--limit N]
+    """
+    print()
+    print("IFEval is not available in benchmark.py (direct API mode).")
+    print("Instruction-checking logic requires lm-evaluation-harness.")
+    print()
+    print(f"Use run_benchmarks.py instead:")
+    print(f"  python3 run_benchmarks.py {model} ifeval")
+    print()
+    import sys; sys.exit(1)
 
 # ── HumanEval ─────────────────────────────────────────────────────────────────
 

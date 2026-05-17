@@ -1,0 +1,4 @@
+# Benchmarks — required for benchmark.py (ARC, HumanEval)
+# Install with: pip install -r requirements-benchmarks.txt
+-r requirements.txt
+datasets>=2.19.0
