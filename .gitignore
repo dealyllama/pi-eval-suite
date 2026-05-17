@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Run artifacts — keep results, ignore scratch output
+runs/*/test-output/
+
+# Benchmark results (large, model-specific — commit selectively)
+benchmark_results/
+
+# Smoke test output files (written to repo root by smoke_test.py)
+smoke_test_results_*.json
+
+# Environment
+.env
+.envrc
+
+# OS
+.DS_Store
+Thumbs.db
